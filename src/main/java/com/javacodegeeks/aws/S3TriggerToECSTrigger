@@ -1,0 +1,86 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.ecs.AmazonECS;
+import com.amazonaws.services.ecs.model.AwsVpcConfiguration;
+import com.amazonaws.services.ecs.model.NetworkConfiguration;
+import com.amazonaws.services.ecs.model.RunTaskRequest;
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+
+
+public class LambdaHandler {
+	
+	private static String accessKey = "xxxxxxx";
+	private static String secretKey = "xxxxxxxxxxxx/xxxxxxxxxxxxx";
+
+	public void S3FileLoadHandler(Map<String,Object> input, Context context) {
+		
+		LambdaLogger logger = context.getLogger();
+		logger.log("==============testttttttttttttt " + context.getMemoryLimitInMB() + "============");
+		System.out.println("==============testttttttttttttt " + context.getMemoryLimitInMB() + "============");
+		
+		AwsVpcConfiguration awsVPCConfiguration = new AwsVpcConfiguration();
+		
+		List<String> subnets = new ArrayList<String>();
+		subnets.add("subnet-xxxxxxxx");
+		subnets.add("subnet-xxxxxxxxxx");
+		
+		awsVPCConfiguration.setSubnets(subnets);
+		
+		NetworkConfiguration nwConfiguration = new NetworkConfiguration();
+		nwConfiguration.withAwsvpcConfiguration(awsVPCConfiguration);
+		
+		AmazonECS ecs = ECSUtil.getAmazonECS(accessKey, secretKey,Regions.US_EAST_1.toString());
+		RunTaskRequest ecsTask = new RunTaskRequest();
+		ecsTask.setCluster("default");
+		ecsTask.setTaskDefinition("fargate-sample-task-definition:1");
+		System.out.println("Calling the fargate task: fargate-sample-task-definition:1");
+		ecsTask.setLaunchType("FARGATE");
+		ecsTask.withNetworkConfiguration(nwConfiguration);
+		ecs.runTask(ecsTask);
+		
+		/*final AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
+		ListObjectsV2Result result = s3.listObjectsV2("lamdaspike01", "json/");
+		List<S3ObjectSummary> objects = result.getObjectSummaries();
+		for(S3ObjectSummary object : objects) {
+			if("")
+			System.out.println(object.getKey() + " }}}}}}}}}}}}}}}}}}}}}}}}}}} " + object.getBucketName() + " {{{{{{{{{{{{{{{{{{{{{{{{ " + object.getETag());
+		}*/
+	}
+}
+
+public class ECSUtil {
+	
+	public static AmazonECS getAmazonECS(String accessKey, String secretKey, String region) {
+		
+		AmazonECS ecs = null;
+		
+		BasicAWSCredentials awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
+		
+		ClientConfiguration config = new ClientConfiguration();
+		config.setProtocol(Protocol.HTTPS);
+		/*config.setProxyHost("xxxxx.us.xxx.com");
+		config.setProxyPort(8080);
+		config.setConnectionTimeout(1000000);
+		config.setUseGzip(true);*/
+		
+		try {
+			ecs = AmazonECSClientBuilder.standard()
+					.withCredentials(new AWSStaticCredentialsProvider(awsCredentials))
+					.withRegion("us-east-1")
+					.withClientConfiguration(config)
+					.build();
+		}
+		catch(Exception ex) {
+			System.out.println(ex.getMessage());
+		}
+		return ecs;
+	}
+}
